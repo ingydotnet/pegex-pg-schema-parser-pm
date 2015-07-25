@@ -1,33 +1,50 @@
 %grammar pg
+%version 0.0.1
 
 pg-schema-dump: sql-statement*
 
 sql-statement:
 | blank-lines
 | comment-lines
-| set-statement
-| create-statement
-| comment-statement
 | alter-statement
-| revoke-statement
-| grant-statement
+| create-function-statement
+| create-other-statement
+| create-table-statement
+| create-view-statement
+| other-statement
 
 blank-lines: / blank-line+ /
 comment-lines: / comment-line+ /
-set-statement: / 'SET ' ALL*? end /
-create-statement: / 'CREATE ' part*? end /
-comment-statement: / 'COMMENT ' ALL*? end /
-alter-statement: / 'ALTER ' ALL*? end /
-revoke-statement: / 'REVOKE ' ALL*? end /
-grant-statement: / 'GRANT ' ALL*? end /
+alter-statement: / 'ALTER' + ( WORD+) + ( ALL*? ) end /
+create-table-statement: / 'CREATE' + 'TABLE' + ( ALL*? ) end /
+create-view-statement: / 'CREATE' + 'VIEW' + ( ALL*? ) end /
+create-function-statement: /
+  'CREATE' + 'FUNCTION' +
+  ( function-part*? )
+  end
+/
+create-other-statement: /
+  'CREATE' +
+  ( 'AGGREGATE'
+  | 'EXTENSION'
+  | (:'UNIQUE' + )? 'INDEX'
+  | 'OPERATOR'
+  | 'SEQUENCE'
+  | 'TYPE'
+  | (:'CONSTRAINT' + )? 'TRIGGER'
+  )
+  +
+  ( ALL*? )
+  end
+/
+other-statement: / (SET|COMMENT|GRANT|REVOKE|TYPE) + ( ALL*? ) end /
 
-part: /(:
+function-part: /(:
   (: 'DECLARE' ALL*? EOL (='BEGIN') )?
   (: 'BEGIN' ALL*? EOL 'END' end ) |
-  ALL
+  (: ALL*? (=';'|DECLARE|BEGIN) )
 )/
+
 blank-line: /(: SPACE* EOL )/
 comment-line: /(: '--' ANY* EOL )/
-end: / SEMI SPACE* EOL /
-
-
+end: /- SEMI SPACE* EOL /
