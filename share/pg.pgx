@@ -1,0 +1,33 @@
+%grammar pg
+
+pg-schema-dump: sql-statement*
+
+sql-statement:
+| blank-lines
+| comment-lines
+| set-statement
+| create-statement
+| comment-statement
+| alter-statement
+| revoke-statement
+| grant-statement
+
+blank-lines: / blank-line+ /
+comment-lines: / comment-line+ /
+set-statement: / 'SET ' ALL*? end /
+create-statement: / 'CREATE ' part*? end /
+comment-statement: / 'COMMENT ' ALL*? end /
+alter-statement: / 'ALTER ' ALL*? end /
+revoke-statement: / 'REVOKE ' ALL*? end /
+grant-statement: / 'GRANT ' ALL*? end /
+
+part: /(:
+  (: 'DECLARE' ALL*? EOL (='BEGIN') )?
+  (: 'BEGIN' ALL*? EOL 'END' end ) |
+  ALL
+)/
+blank-line: /(: SPACE* EOL )/
+comment-line: /(: '--' ANY* EOL )/
+end: / SEMI SPACE* EOL /
+
+

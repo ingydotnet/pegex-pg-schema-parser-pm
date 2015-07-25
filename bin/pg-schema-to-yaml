@@ -1,0 +1,20 @@
+#!/usr/bin/env perl
+
+use strict; use warnings;
+use Pegex::Parser;
+use Pegex::PG::Schema::Parser::Grammar;
+use Pegex::PG::Schema::Parser::Receiver;
+use YAML::XS;
+
+my $parser = Pegex::Parser->new(
+    grammar => Pegex::PG::Schema::Parser::Grammar->new,
+    receiver => Pegex::PG::Schema::Parser::Receiver->new,
+    # debug => 1,
+);
+# use XXX; XXX $parser->grammar->tree;
+
+my $input = do { local $/; <> };
+
+my $tree = $parser->parse($input);
+
+print YAML::XS::Dump($tree);
