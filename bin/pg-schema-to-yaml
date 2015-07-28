@@ -11,7 +11,7 @@ my $parser = Pegex::Parser->new(
     receiver => Pegex::PG::Schema::Parser::Receiver->new,
     # debug => 1,
 );
-# use XXX; XXX $parser->grammar->tree;
+# use XXX; XXX $parser->grammar->tree->{expression};
 
 my $input = do { local $/; <> };
 

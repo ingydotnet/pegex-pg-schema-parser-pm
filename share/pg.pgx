@@ -1,28 +1,55 @@
+# A grammar for PG Schema SQL
+
 %grammar pg
 %version 0.0.1
 
-pg-schema-dump: sql-statement*
-
-sql-statement:
+# Top level is a sequence of blanks lines, comments and SQL statements:
+pg-schema-sql-dump: (
 | blank-lines
 | comment-lines
-| alter-statement
-| create-function-statement
-| create-other-statement
+| sql-statement
+)*
+
+# For now we are just concerned with CREATEs for TABLEs and VIEWs. Everything
+# else is bundled under 'other' except FUNCTIONs because they need a slightly
+# more complex ruleset.
+#
+# This gets us through an entire schema dump. We can define things as we need
+# them.
+sql-statement:
 | create-table-statement
 | create-view-statement
+| create-function-statement
+| create-other-statement
 | other-statement
 
+# Matching multiple blanks and comments is really just a speedup:
 blank-lines: / blank-line+ /
 comment-lines: / comment-line+ /
-alter-statement: / 'ALTER' + ( WORD+) + ( ALL*? ) end /
-create-table-statement: / 'CREATE' + 'TABLE' + ( ALL*? ) end /
+
+#------------------------------------------------------------------------------
+# SQL statement top-level rules:
+#------------------------------------------------------------------------------
+
+# This rule is basically fleshed out:
+create-table-statement:
+  / 'CREATE' + 'TABLE' + /
+  /( name )/ +
+  '(' + (column-definition | constraint)+ % /- COMMA -/ + ')'
+  end
+
+# This is dummied out (coarse parse) at the moment, but will be implemented
+# next:
 create-view-statement: / 'CREATE' + 'VIEW' + ( ALL*? ) end /
+
+# This is dummied out too, but because it is more complicated than the others:
 create-function-statement: /
   'CREATE' + 'FUNCTION' +
   ( function-part*? )
   end
 /
+
+# The next 2 rules dummy out everything else:
 create-other-statement: /
   'CREATE' +
   ( 'AGGREGATE'
@@ -36,15 +63,79 @@ create-other-statement: /
   +
   ( ALL*? )
   end
-/
-other-statement: / (SET|COMMENT|GRANT|REVOKE|TYPE) + ( ALL*? ) end /
+/ # { "create-" + $1.lower.gsub(" ", "-"): $2 }
 
+other-statement: / (ALTER|SET|COMMENT|GRANT|REVOKE|TYPE) + ( ALL*? ) end /
+
+#------------------------------------------------------------------------------
+# SQL sub-rules:
+#------------------------------------------------------------------------------
+column-definition:
+  / ( name ) + ( data-type ) /
+  ( + ( /(DEFAULT)/ + expression ))?
+  (/+ ( (:'NOT' + )? 'NULL')/)?
+
+constraint: / 'CONSTRAINT' + ( name ) + 'CHECK' +/ expression
+
+data-type: /
+  (:bigint
+  |boolean
+  |bytea
+  |cidr
+  |citext
+  |'character varying' count-modifier?
+  |character (:'(' count ')')?
+  |date
+  |'double precision'
+  |inet
+  |integer
+  |interval
+  |json
+  |macaddr
+  |numeric count-modifier-two?
+  |regclass
+  |smallint
+  |text
+  |uuid
+  |'timestamp' count-modifier? ' with time zone'
+  |'timestamp without time zone'
+  |tsvector
+  # XXX:
+  | WORD+ '_manager_state'
+)/
+expression: (
+| '(' expression ')'
+| /( name ) '('/ expression+ % /- ',' -/ ')'
+| /(now)'()'/
+| /(true|false)/
+| /( number )/
+| /( single-quoted-string )/
+| /((:'NOT' + )? 'NULL')/
+| /( name )/
+) ( /'::' ( data-type )/ )?
+( /+ (AND|OR|IS|'<='|'>='|'<>'|['+*%=<>']) +/ expression)*
+
+#------------------------------------------------------------------------------
+# Basic token rules:
+#------------------------------------------------------------------------------
+blank-line: /(: SPACE* EOL )/
+comment-line: /(: '--' ANY* EOL )/
+name: /(:
+  (i: [a-z_] WORD*)
+  | double-quoted-string
+)/
+number: / DIGIT+ ('.' DIGIT+)? /
+count: / DIGIT+ /
+single-quoted-string: / SINGLE [^ SINGLE]*? SINGLE /
+double-quoted-string: / DOUBLE [^ DOUBLE]*? DOUBLE /
+count-modifier: /(: '(' count ')')/
+count-modifier-two: /(:'(' count COMMA count ')')/
+end: /- SEMI SPACE* EOL /
+
+# Function definitions can contain semicolons, so we need to get a little more
+# specific to find their real ending:
 function-part: /(:
   (: 'DECLARE' ALL*? EOL (='BEGIN') )?
   (: 'BEGIN' ALL*? EOL 'END' end ) |
   (: ALL*? (=';'|DECLARE|BEGIN) )
 )/
-
-blank-line: /(: SPACE* EOL )/
-comment-line: /(: '--' ANY* EOL )/
-end: /- SEMI SPACE* EOL /
