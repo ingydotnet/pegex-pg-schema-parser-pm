@@ -2,7 +2,6 @@ use strict; use warnings;
 package Pegex::PG::Schema::Parser::Receiver;
 use Pegex::Base;
 extends 'Pegex::Tree';
-use boolean;
 
 sub got_create_table_statement {
   my ($self, $got) = @_;
@@ -28,6 +27,7 @@ sub got_column_definition {
 }
 
 sub got_constraint {
+  my ($self, $got) = @_;
   return;
 }
 
