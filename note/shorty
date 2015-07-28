@@ -1,0 +1,15 @@
+{ @stack.push $1.len }
+{ @stack.last }
+{ @stack.pop }
+
+@           → $self
+@foo        → $self->{foo}
+@:foo       → $self->{foo}
+@.foo       → $self->foo()
+$           → $got
+$1          → $got[0]       $:0
+foo = 1     → my $foo = 1
+@foo = 1    → $self->{stash}
+
+'string'
+"interpolated string"
